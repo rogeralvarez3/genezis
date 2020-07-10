@@ -5,6 +5,12 @@
       <v-spacer></v-spacer>
       <v-tooltip bottom>
         <template v-slot:activator="{on}">
+          <v-btn v-on="on" icon dark color="success" @click="dlgReporte=true"><v-icon>cloud_download</v-icon></v-btn>
+        </template>
+        <span>Descargar informe</span>
+      </v-tooltip>
+      <v-tooltip bottom>
+        <template v-slot:activator="{on}">
           <v-btn v-on="on" icon dark color="success" @click="editMode=true;selected=clonar(nuevo);"><v-icon>add</v-icon></v-btn>
         </template>
         <span>Agregar escritura</span>
@@ -184,11 +190,29 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+    <v-dialog v-model="dlgReporte" width="400">
+      <v-card>
+        <v-card-title class="grey lighten-4 pa-0 pl-2">Informe de escrituras <v-spacer></v-spacer><v-btn icon dark color="red" @click="dlgReporte=false"><v-icon>close</v-icon></v-btn></v-card-title>
+        <v-divider></v-divider>
+        <v-card-text>
+          <v-container>
+            <v-text-field type="date" v-model="reporte.fechaInicial" label="Fecha inicial:"></v-text-field>
+            <v-text-field type="date" v-model="reporte.fechaFinal" label="Fecha final:"></v-text-field>
+          </v-container>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn icon dark color="success" @click="descargarInforme()"><v-icon>save_alt</v-icon></v-btn>
+          <v-spacer></v-spacer>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-app>
 </template>
 <script>
 import axios from 'axios'
 import { setTimeout } from 'timers';
+const jexcel = require("json2excel")
 export default {
   name: 'App',
   data () {
@@ -209,7 +233,9 @@ export default {
       movimientos:[],
       dlgMovs:false,
       créditos:[],
-      dlgCréditos:false
+      dlgCréditos:false,
+      dlgReporte:false,
+      reporte:{fechaInicial:"",fechaFinal:""}
     }
   },
   watch:{
@@ -236,6 +262,27 @@ export default {
 
   },
   methods:{
+    descargarInforme:function(){
+      var mv=this
+      if(mv.tabla.length===0){return}
+      var jsonData = mv.tabla.filter(reg=>{
+        return parseDate(reg.entrada) >= parseDate(mv.reporte.fechaInicial) && parseDate(reg.entrada)<= parseDate(mv.reporte.fechaFinal)
+        //return true
+      })
+      var cols ={}
+      Object.keys(mv.tabla[0]).forEach(c=>{cols[c]=c.toUpperCase()})
+      var xls = {
+        sheets: [{
+          header: cols,
+          items: jsonData,
+          sheetName: 'hoja1',
+        }],
+        filepath: 'Informe.xlsx'
+      }
+      jexcel.j2e(xls,function(err){ 
+        console.log('finish')
+      });
+    },
     obtenerTabla:function(){
       var mv=this
       mv.loading=true
